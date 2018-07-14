@@ -5,13 +5,15 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.support.v7.app.AppCompatActivity
+import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.support.v7.app.AppCompatActivity
 import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,8 +22,6 @@ class MainActivity : AppCompatActivity() {
 
     private val RC_PERMISSIONS = 101
     private val RC_SELECT_IMGAE = 103
-
-    private lateinit var imageBitmap: Bitmap
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun selectImage() {
-        val selectImageIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media
+        val selectImageIntent = Intent(Intent.ACTION_GET_CONTENT, MediaStore.Images.Media
                 .EXTERNAL_CONTENT_URI)
         startActivityForResult(selectImageIntent, RC_SELECT_IMGAE)
     }
@@ -77,27 +77,24 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when (requestCode) {
             RC_SELECT_IMGAE -> {
-                val selectedImage = data?.data
-                selectedImage?.let {
-                    val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
-                    val cursor = contentResolver.query(it,
-                            filePathColumn,
-                            null,
-                            null,
-                            null)
-                    cursor.moveToFirst()
-                    val columnIndex = cursor.getColumnIndex(filePathColumn[0])
-                    val imgPath = cursor.getString(columnIndex)
-                    cursor.close()
-                    displaySelectedImage(imgPath)
+                if (data != null) {
+                    val uri = data.data
+                    displaySelectedImage(getBitmapFromUri(uri))
                 }
             }
             else -> super.onActivityResult(requestCode, resultCode, data)
         }
     }
 
-    private fun displaySelectedImage(imagePath: String) {
-        imageBitmap = BitmapFactory.decodeFile(imagePath)
+    private fun getBitmapFromUri(uri: Uri): Bitmap {
+        val parcelFileDescriptor = contentResolver.openFileDescriptor(uri, "r")
+        val fileDescriptor = parcelFileDescriptor?.fileDescriptor
+        val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
+        parcelFileDescriptor.close()
+        return image
+    }
+
+    private fun displaySelectedImage(imageBitmap: Bitmap) {
         iv_selected_image.setImageBitmap(imageBitmap)
     }
 }
